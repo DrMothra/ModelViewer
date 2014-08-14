@@ -25,3 +25,26 @@ body {
     margin: 0;
     overflow: hidden;
 }
+.mainButton {
+    border-radius: 5px;
+    position: absolute;
+    padding: 5px;
+    background-color: rgba(150, 150, 150, 0.5);
+    overflow: hidden;
+    color: #7fa5ff;
+}
+#loadButton {
+    top: 20px;
+    left: 300px;
+}
+.upload {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    margin: 0;
+    padding: 0px;
+    font-size: 20px;
+    cursor: pointer;
+    opacity: 0;
+    background-color: #004040;
+}

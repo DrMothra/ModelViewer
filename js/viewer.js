@@ -50,7 +50,10 @@ Viewer.prototype.init = function(container) {
     BaseApp.prototype.init.call(this, container);
     this.updateRequired = false;
     this.guiControls = null;
+    this.modelLoader = new THREE.JSONLoader();
     this.filename = '';
+    this.loadedModel = null;
+    this.debug = true;
 };
 
 Viewer.prototype.update = function() {
@@ -74,6 +77,14 @@ Viewer.prototype.update = function() {
         }
     }
 
+    if(this.loadedModel != null) {
+        if(this.debug) {
+            console.log('Model =', this.loadedModel);
+            this.debug = false;
+        }
+
+    }
+
     BaseApp.prototype.update.call(this);
 };
 
@@ -85,7 +96,36 @@ Viewer.prototype.createScene = function() {
     addGroundPlane(this.scene, GROUND_WIDTH, GROUND_HEIGHT);
 };
 
+Viewer.prototype.onSelectFile = function(evt) {
+    //Load given json file
+    var files = evt.target.files;
+    if (files.length==0) {
+        console.log('no file specified');
+        this.filename = '';
+        return;
+    }
+    this.filename = files[0].name;
+    var _this = this;
+    if(this.loadedModel != null) {
+        this.scene.remove(this.loadedModel);
+    }
 
+    try{
+        this.modelLoader.load('models/'+this.filename, function(geom, material) {
+            //Construct mesh and add to scene
+            //DEBUG
+            console.log("Mat =", material);
+
+            var tempMat = new THREE.MeshFaceMaterial(material);
+            _this.loadedModel = new THREE.Mesh(geom, tempMat);
+            _this.loadedModel.rotation.y = Math.PI/8;
+            _this.scene.add(_this.loadedModel);
+        });
+    }
+    catch(error){
+        alert(error);
+    }
+};
 
 $(document).ready(function() {
     //Initialise app
@@ -96,9 +136,15 @@ $(document).ready(function() {
     app.createScene();
     //app.createGUI();
 
+    //GUI callbacks
+    $("#chooseFile").on("change", function(evt) {
+        app.onSelectFile(evt);
+    });
+
+    /*
     $(document).keydown(function (event) {
         app.onKeyDown(event);
     });
-
+    */
     app.run();
 });
