@@ -37,7 +37,7 @@ BaseApp.prototype.init = function(container) {
 };
 
 BaseApp.prototype.createRenderer = function() {
-    this.renderer = new THREE.WebGLRenderer({preserveDrawingBuffer: true});
+    this.renderer = new THREE.WebGLRenderer({preserveDrawingBuffer: false});
     this.renderer.setClearColor(0x5c5f64, 1.0);
     this.renderer.shadowMapEnabled = true;
     this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -113,7 +113,7 @@ BaseApp.prototype.createScene = function() {
 
 BaseApp.prototype.createCamera = function() {
 
-    this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000 );
+    this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 10000 );
     this.camera.position.set( 0, 0, 100 );
 
     console.log('dom =', this.renderer.domElement);
