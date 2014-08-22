@@ -103,6 +103,7 @@ Viewer.prototype.createScene = function() {
     addGroundPlane(this.scene, GROUND_WIDTH, GROUND_HEIGHT);
 };
 
+/*
 Viewer.prototype.onSelectFile = function(evt) {
     //Load given json file
     var files = evt.target.files;
@@ -117,18 +118,6 @@ Viewer.prototype.onSelectFile = function(evt) {
         this.scene.remove(this.loadedModel);
     }
 
-    /*
-     this.modelLoader.load('models/'+this.filename, function(geom, material) {
-     //Construct mesh and add to scene
-     //DEBUG
-     console.log("Mat =", material);
-
-     var tempMat = new THREE.MeshFaceMaterial(material);
-     _this.loadedModel = new THREE.Mesh(geom, tempMat);
-     _this.loadedModel.rotation.y = Math.PI/8;
-     _this.scene.add(_this.loadedModel);
-     });
-     */
     var modelPath = 'models/'+this.filename;
     console.log('Path =', modelPath);
     this.modelLoader.load(modelPath, function (object) {
@@ -138,6 +127,65 @@ Viewer.prototype.onSelectFile = function(evt) {
         _this.scene.add(object);
         _this.debug = true;
     });
+};
+*/
+
+Viewer.prototype.onSelectFile = function(evt) {
+    //User selected file
+    //See if we support filereader API's
+    if (window.File && window.FileReader && window.FileList && window.Blob) {
+        //File APIs are supported.
+        var files = evt.target.files; // FileList object
+        if (files.length == 0) {
+            console.log('no file specified');
+            this.filename = "";
+            return;
+        }
+        //Clear old data first
+        if (this.dataFile) {
+            this.reset();
+        }
+        this.dataFile = files[0];
+        this.filename = this.dataFile.name;
+        console.log("File chosen", this.filename);
+
+        //Try and read this file
+        this.parseFile();
+    } else {
+        alert('sorry, file apis not supported');
+    }
+};
+
+Viewer.prototype.parseFile = function() {
+    //Attempt to load and parse given json file
+    if(!this.filename) return;
+
+    console.log("Reading file...");
+
+    var reader = new FileReader();
+    var _this = this;
+    reader.onload = function(evt) {
+        //File loaded - parse it
+        console.log('file read: '+evt.target.result);
+        try {
+            _this.data = evt.target.result;
+            _this.parseOBJFile(_this.data);
+        }
+        catch (err) {
+            console.log('error parsing file', err);
+            alert('Sorry, there was a problem reading that file');
+            return;
+        }
+    };
+
+    // Read in the file
+    reader.readAsText(this.dataFile, 'ISO-8859-1');
+};
+
+Viewer.prototype.parseOBJFile = function(data) {
+    //Parse mni obj file
+    var first = data.split("\n", 1);
+    console.log("First =", first);
 };
 
 $(document).ready(function() {
