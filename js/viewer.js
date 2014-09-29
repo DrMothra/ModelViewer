@@ -39,6 +39,21 @@ function addGroundPlane(scene, width, height) {
     scene.add(plane);
 }
 
+function readLine(text) {
+    //Get next line of text
+    var cr = text.indexOf('\r');
+    if(cr >= 0) {
+        return text.substr(0, cr);
+    } else {
+        return null;
+    }
+}
+
+function analyseLine(line) {
+    //See what data contains
+
+}
+
 //Init this app from base
 function Viewer() {
     BaseApp.call(this);
@@ -166,10 +181,10 @@ Viewer.prototype.parseFile = function() {
     var _this = this;
     reader.onload = function(evt) {
         //File loaded - parse it
-        console.log('file read: '+evt.target.result);
+        console.log('file read');
         try {
             _this.data = evt.target.result;
-            _this.parseOBJFile(_this.data);
+            _this.parseMNIFile(_this.data);
         }
         catch (err) {
             console.log('error parsing file', err);
@@ -186,6 +201,24 @@ Viewer.prototype.parseOBJFile = function(data) {
     //Parse mni obj file
     var first = data.split("\n", 1);
     console.log("First =", first);
+};
+
+Viewer.prototype.parseMNIFile = function(contents) {
+    //Read file contents
+    //Ensure we have polygons
+    var line = readLine(contents);
+    if(line.charAt(0) != 'P') return;
+
+    line = line.slice(2, line.length-1);
+    for(var i=0; i<3; ++i) {
+        var value = parseFloat(line);
+    }
+    while(contents != null) {
+        line = readLine(contents);
+        if(line) {
+            analyseLine(line);
+        }
+    }
 };
 
 $(document).ready(function() {
