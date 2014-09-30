@@ -39,19 +39,57 @@ function addGroundPlane(scene, width, height) {
     scene.add(plane);
 }
 
-function readLine(text) {
+function readLine(text, fileHead) {
     //Get next line of text
-    var cr = text.indexOf('\r');
-    if(cr >= 0) {
-        return text.substr(0, cr);
+    var offset = fileHead != undefined ? fileHead : 0;
+    var index = text.indexOf('\r', offset);
+    if(index >= 0) {
+        return text.substr(offset, index-offset);
     } else {
         return null;
     }
 }
 
+function readVerts(line) {
+    var point = parseFloat(line);
+    if(isNaN(point)) return null;
+
+    var index = line.indexOf(' ');
+    if(index >= 0) {
+        ++index;
+        line = line.substr(index, line.length-index);
+    }
+
+    return point;
+}
+
+function readIndices(line) {
+    var index = parseInt(line);
+    if(isNaN(index)) return null;
+
+    return index;
+}
+
+function skipSpaces(line) {
+    //Get value up to next space
+    //2nd space if first char is space
+    var offset = line.charAt(0) == ' ' ? 1 : 0;
+    var index = line.indexOf(' ', offset);
+    if(index >= 0) {
+        ++index;
+        return line.substr(index, line.length-index);
+    }
+
+    return null;
+}
+
 function analyseLine(line) {
     //See what data contains
 
+}
+
+function get_blob() {
+    return window.Blob;
 }
 
 //Init this app from base
@@ -206,19 +244,154 @@ Viewer.prototype.parseOBJFile = function(data) {
 Viewer.prototype.parseMNIFile = function(contents) {
     //Read file contents
     //Ensure we have polygons
+    var fileHead = 0;
+    var fileLength = contents.length;
     var line = readLine(contents);
+    fileHead += (line.length + 2);
+
     if(line.charAt(0) != 'P') return;
 
-    line = line.slice(2, line.length-1);
+    line = line.slice(2, line.length);
+    //Get colour data
+    var colours = [];
     for(var i=0; i<3; ++i) {
-        var value = parseFloat(line);
+        var colour = parseFloat(line);
+        colours.push(colour);
+        line = line.slice(4, line.length);
     }
-    while(contents != null) {
-        line = readLine(contents);
+
+    var specular = parseInt(line);
+    line = line.slice(3, line.length);
+
+    var alpha = parseInt(line);
+    line = line.slice(2, line.length);
+
+    var numVerts = parseInt(line);
+
+    var vertices = [];
+    var point;
+    for(var i=0; i<numVerts; ++i) {
+        line = readLine(contents, fileHead);
+        if(line == null) {
+            console.log('Bad vertex');
+            continue;
+        }
+        if(line.length == 0) {
+            console.log('No vertex');
+            continue;
+        }
+        fileHead += (line.length + 2);
         if(line) {
-            analyseLine(line);
+            for(var j=0; j<3; ++j) {
+                point = readVerts(line);
+                if(point == null) {
+                    console.log('bad vertex in line');
+                }
+                vertices.push(point);
+                line = skipSpaces(line);
+            }
         }
     }
+
+    line = readLine(contents, fileHead);
+    fileHead += (line.length + 2);
+
+    var normals = [];
+    var lineNumber = 0
+    for(var i=0; i<numVerts; ++i) {
+        line = readLine(contents, fileHead);
+        ++lineNumber;
+        if(line == null) {
+            console.log('Bad normal');
+            continue;
+        }
+        fileHead += (line.length + 2);
+        if(line.length == 0) {
+            console.log('No normal line=', lineNumber);
+            continue;
+        }
+        if(line) {
+            for(var j=0; j<3; ++j) {
+                point = readVerts(line);
+                if(point == null) {
+                    console.log('Bad normal in line');
+                }
+                normals.push(point);
+                line = skipSpaces(line);
+            }
+        }
+    }
+
+    //Get num polygons
+    line = readLine(contents, fileHead);
+    fileHead += (line.length + 2);
+    line = readLine(contents, fileHead);
+    fileHead += (line.length + 2);
+    var numPolygons = parseInt(line);
+    if(isNaN(numPolygons)) numPolygons = 0;
+
+    console.log('Polygons =', numPolygons);
+
+    line = readLine(contents, fileHead);
+    fileHead += (line.length + 2);
+
+    line = readLine(contents, fileHead);
+    fileHead += (line.length + 2);
+
+    //Indices
+    var lineNumber = 0;
+    var indices = [];
+    for(var i=0; i<61440; ++i) {
+        line = readLine(contents, fileHead);
+        ++lineNumber;
+        if(line == null) {
+            console.log('Bad index line =', lineNumber);
+            continue;
+        }
+        fileHead += (line.length + 2);
+        if(line.length == 0){
+            console.log('No index line =', lineNumber);
+            continue;
+        }
+
+        for(var j=0; j<8; ++j) {
+            var index = readIndices(line);
+            if(index == null) {
+                console.log('Bad index in line');
+            }
+            indices.push(index);
+            line = skipSpaces(line);
+        }
+    }
+
+    console.log('Verts =', vertices.length, 'Normals =', normals.length, 'Indices =', indices.length);
+
+    //Set up geometry
+    var geom = new THREE.BufferGeometry();
+    var geomMat = new THREE.MeshLambertMaterial( {color: 0xababab});
+    geom.addAttribute('index', new THREE.BufferAttribute( new Uint32Array(indices), 1));
+    geom.addAttribute('position', new THREE.BufferAttribute( new Float32Array(vertices), 3));
+    geom.addAttribute('normal', new THREE.BufferAttribute( new Float32Array(normals), 3));
+    geom.computeBoundingSphere();
+    //geom.offsets = [ {start: 0, count: 360000, index: 0}];
+
+    var mesh = new THREE.Mesh(geom, geomMat);
+
+    this.scene.add(mesh);
+
+    //Write out to obj format
+    var testVerts = [];
+    testVerts.push(0.1, 0.2, 0.3);
+
+    var fh = fopen("./test.obj", 3); // Open the file for writing
+
+    if(fh!=-1) // If the file has been successfully opened
+    {
+        var str = "Some text goes here...";
+        fwrite(fh, str); // Write the string to a file
+        fclose(fh); // Close the file
+    }
+
 };
 
 $(document).ready(function() {
