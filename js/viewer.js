@@ -39,6 +39,43 @@ function addGroundPlane(scene, width, height) {
     scene.add(plane);
 }
 
+var fs = null;
+function errorHandler(e) {
+    var msg = '';
+    switch (e.code) {
+        case FileError.QUOTA_EXCEEDED_ERR:
+            msg = 'QUOTA_EXCEEDED_ERR';
+            break;
+        case FileError.NOT_FOUND_ERR:
+            msg = 'NOT_FOUND_ERR';
+            break;
+        case FileError.SECURITY_ERR:
+            msg = 'SECURITY_ERR';
+            break;
+        case FileError.INVALID_MODIFICATION_ERR:
+            msg = 'INVALID_MODIFICATION_ERR';
+            break;
+        case FileError.INVALID_STATE_ERR:
+            msg = 'INVALID_STATE_ERR';
+            break;
+        default:
+            msg = 'Unknown Error';
+            break;
+    };
+    console.log('Error: ', msg);
+}
+
+function onInitFS(fileSystem) {
+    fs = fileSystem;
+}
+
+function initFS() {
+    window.requestFileSystem(window.TEMPORARY, 1024*1024, function(filesystem) {
+        fs = filesystem;
+        console.log('Filesystem =', fs.name);
+    }, errorHandler);
+}
+
 function readLine(text, fileHead) {
     //Get next line of text
     var offset = fileHead != undefined ? fileHead : 0;
@@ -110,7 +147,7 @@ Viewer.prototype.init = function(container) {
         console.log( item, loaded, total );
 
     };
-    this.modelLoader = new THREE.OBJLoader(this.manager);
+
     this.filename = '';
     this.loadedModel = null;
     this.debug = true;
@@ -154,6 +191,16 @@ Viewer.prototype.createScene = function() {
 
     //Load ground plane
     addGroundPlane(this.scene, GROUND_WIDTH, GROUND_HEIGHT);
+
+    this.modelLoader = new THREE.OBJLoader(this.manager);
+    var _this = this;
+    /*
+    this.modelLoader.load( 'models/test.obj', function ( object ) {
+
+        _this.scene.add( object );
+
+    } );
+    */
 };
 
 /*
@@ -380,23 +427,48 @@ Viewer.prototype.parseMNIFile = function(contents) {
     this.scene.add(mesh);
 
     //Write out to obj format
-    var testVerts = [];
-    testVerts.push(0.1, 0.2, 0.3);
+    var state = '# Vertices\\n';
 
-    var fh = fopen("./test.obj", 3); // Open the file for writing
-
-    if(fh!=-1) // If the file has been successfully opened
-    {
-        var str = "Some text goes here...";
-        fwrite(fh, str); // Write the string to a file
-        fclose(fh); // Close the file
+    //Vertices
+    for(var i= 0, v=0; i<numVerts; ++i, v+=3) {
+        state += 'v  ';
+        state += vertices[v];
+        state += ' ';
+        state += vertices[v+1];
+        state += ' ';
+        state += vertices[v+2];
+        state += '\\n';
     }
 
+    //Normals
+    for(var i= 0, v=0; i<numVerts; ++i, v+=3) {
+        state += 'vn  ';
+        state += normals[v];
+        state += ' ';
+        state += normals[v+1];
+        state += ' ';
+        state += normals[v+2];
+        state += '\\n';
+    }
+
+    //Faces
+    var numIndices = 61440 * 8;
+    var index;
+
+    
+    //var bb = new BlobBuilder();
+    var bb = get_blob();
+    var filename = 'test.json';
+    saveAs(new bb(
+            [JSON.stringify(state)]
+            , {type: "text/plain;charset=" + document.characterSet}
+        )
+        , filename);
 };
 
 $(document).ready(function() {
     //Initialise app
-    console.log("Starting...");
+
     var container = document.getElementById("WebGL-output");
     var app = new Viewer();
     app.init(container);
@@ -408,6 +480,10 @@ $(document).ready(function() {
         app.onSelectFile(evt);
     });
 
+    window.requestFileSystem = window.requestFileSystem || window.webkitRequestFileSystem;
+    if (window.requestFileSystem) {
+        initFS();
+    };
     /*
     $(document).keydown(function (event) {
         app.onKeyDown(event);
