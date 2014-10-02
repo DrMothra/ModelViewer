@@ -151,6 +151,7 @@ Viewer.prototype.init = function(container) {
     this.filename = '';
     this.loadedModel = null;
     this.debug = true;
+    this.rotInc = Math.PI/320;
 };
 
 Viewer.prototype.update = function() {
@@ -175,11 +176,7 @@ Viewer.prototype.update = function() {
     }
 
     if(this.loadedModel != null) {
-        if(this.debug) {
-            console.log('Model =', this.loadedModel);
-            this.debug = false;
-        }
-
+        this.loadedModel.rotation.y += this.rotInc;
     }
 
     BaseApp.prototype.update.call(this);
@@ -192,15 +189,17 @@ Viewer.prototype.createScene = function() {
     //Load ground plane
     addGroundPlane(this.scene, GROUND_WIDTH, GROUND_HEIGHT);
 
-    this.modelLoader = new THREE.OBJLoader(this.manager);
+    this.modelLoader = new THREE.OBJMTLLoader();
     var _this = this;
-    /*
-    this.modelLoader.load( 'models/test.obj', function ( object ) {
+
+
+    this.modelLoader.load( 'models/brain.obj', 'models/brain.mtl', function ( object ) {
 
         _this.scene.add( object );
+        _this.loadedModel = object;
 
     } );
-    */
+
 };
 
 /*
@@ -430,6 +429,7 @@ Viewer.prototype.parseMNIFile = function(contents) {
     var state = '# Vertices\\n';
 
     //Vertices
+    /*
     for(var i= 0, v=0; i<numVerts; ++i, v+=3) {
         state += 'v  ';
         state += vertices[v];
@@ -439,8 +439,10 @@ Viewer.prototype.parseMNIFile = function(contents) {
         state += vertices[v+2];
         state += '\\n';
     }
+    */
 
     //Normals
+    state = '# Normals\\n';
     for(var i= 0, v=0; i<numVerts; ++i, v+=3) {
         state += 'vn  ';
         state += normals[v];
@@ -452,9 +454,29 @@ Viewer.prototype.parseMNIFile = function(contents) {
     }
 
     //Faces
+    /*
     var numIndices = 61440 * 8;
     var index;
-
+    state = '';
+    for(var i= 0, j=0; i<numVerts; ++i, j+=3) {
+        state += 'f ';
+        index = indices[j]+1;
+        state += index;
+        state += '//';
+        state += index;
+        state += ' ';
+        index = indices[j+1]+1;
+        state += index;
+        state += '//';
+        state += index;
+        state += ' ';
+        index = indices[j+2]+1;
+        state += index;
+        state += '//';
+        state += index;
+        state += '\\n';
+    }
+    */
     
     //var bb = new BlobBuilder();
     var bb = get_blob();
